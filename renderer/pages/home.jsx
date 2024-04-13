@@ -1,46 +1,53 @@
-import React from 'react'
-import Head from 'next/head'
-import Link from 'next/link'
-import Image from 'next/image'
+import React, { useEffect } from 'react';
+import path from 'path';
+import matter from 'gray-matter';
 
 export default function HomePage() {
-  const [message, setMessage] = React.useState('No message found')
+  useEffect(() => {
+    const getMarkdownFiles = async () => {
+      try {
+        const directory = '/projects'; 
+        const response = await fetch(directory);
+        console.log(directory)
+        if (!response.ok) {
+          const errorMessage = `Failed to fetch Markdown files: ${response.statusText}`;
+          throw new Error(errorMessage);
+        }
+        
+        const fileNames = await response.json();
 
-  React.useEffect(() => {
-    window.ipc.on('message', (message) => {
-      setMessage(message)
-    })
-  }, [])
+        fileNames.forEach(async (fileName) => {
+          try {
+            const fullPath = `${directory}/${fileName}`;
+            const markdownResponse = await fetch(fullPath);
+
+            if (!markdownResponse.ok) {
+              throw new Error(`Failed to fetch Markdown file: ${fileName}`);
+            }
+
+            const markdownText = await markdownResponse.text();
+            const { data, content } = matter(markdownText);
+            console.log('Markdown Data:', data);
+          } catch (error) {
+            console.error(error);
+          }
+        });
+      } catch (error) {
+        console.error(error);
+      }
+    };
+
+    getMarkdownFiles();
+  }, []);
 
   return (
     <React.Fragment>
-      <Head>
-        <title>Home - Nextron (basic-lang-javascript)</title>
-      </Head>
       <div>
         <p>
           ⚡ Electron + Next.js ⚡ -
-          <Link href="/next">
-            <a>Go to next page</a>
-          </Link>
+          <a href="/next">Go to next page</a>
         </p>
-        <Image
-          src="/images/logo.png"
-          alt="Logo image"
-          width="256px"
-          height="256px"
-        />
-      </div>
-      <div>
-        <button
-          onClick={() => {
-            window.ipc.send('message', 'Hello')
-          }}
-        >
-          Test IPC
-        </button>
-        <p>{message}</p>
       </div>
     </React.Fragment>
-  )
+  );
 }
